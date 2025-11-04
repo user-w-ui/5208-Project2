@@ -3,7 +3,7 @@ from pyspark.sql import SparkSession
 from pyspark.sql.types import DoubleType
 from pyspark.ml import Pipeline
 from pyspark.ml.feature import VectorAssembler, MinMaxScaler
-from pyspark.ml.regression import RandomForestRegressor, GBTRegressor
+from pyspark.ml.regression import RandomForestRegressor, GBTRegressor, LinearRegression
 from pyspark.ml.evaluation import RegressionEvaluator
 
 import sys, os, time
@@ -12,13 +12,14 @@ from src.time_cv import prefix_folds
 from src.model_selection import grid_search_prefix_cv
 from src import plot
 
-numeric_features = [
-        "dt_min", "ELEVATION", "DEW", "VIS", "CIG", "SLP", "WND_Speed",
-        "TMP_lag1", "time_speed", "time_a", "WND_sin", "WND_cos",
-        "month_sin", "month_cos", "day_sin", "day_cos",
-        "hour_sin", "hour_cos", "minute_sin", "minute_cos",
-        "lat_sin", "lat_cos", "lon_sin", "lon_cos"
-    ]
+# numeric_features = [
+#         "dt_min", "ELEVATION", "DEW", "VIS", "CIG", "SLP", "WND_Speed",
+#         "TMP_lag1", "time_speed", "time_a", "WND_sin", "WND_cos",
+#         "month_sin", "month_cos", "day_sin", "day_cos",
+#         "hour_sin", "hour_cos", "minute_sin", "minute_cos",
+#         "lat_sin", "lat_cos", "lon_sin", "lon_cos"
+#     ]
+numeric_features = ["dt_min"]
 LABEL = "TMP"
 TIMESTAMP_COL = "DATE_TS"
 
@@ -34,9 +35,9 @@ def main():
 
     spark = SparkSession.builder.appName("WeatherForecast").getOrCreate()
     train_df = spark.read.parquet(args.train_path).drop("STATION") 
-    train_df = train_df.withColumn("ELEVATION", train_df["ELEVATION"].cast(DoubleType()))
+    train_df = train_df.withColumn("ELEVATION", train_df["ELEVATION"].cast(DoubleType())).limit(1000)
     test_df = spark.read.parquet(args.test_path).drop("STATION") 
-    test_df = test_df.withColumn("ELEVATION", test_df["ELEVATION"].cast(DoubleType())) 
+    test_df = test_df.withColumn("ELEVATION", test_df["ELEVATION"].cast(DoubleType())).limit(50)
 
     train_sorted = train_df.orderBy(TIMESTAMP_COL)
     total_rows = train_sorted.count()
@@ -91,10 +92,6 @@ def main():
 
 
     best_params, grid_results = grid_search_prefix_cv(folds, base_stages, estimator_builder, param_grid, evaluator)
-    spark.createDataFrame(
-        [(str(params), score) for params, score in grid_results],
-        ["params", "avg_rmse"],
-    ).show(truncate=False)
 
     final_pipeline = Pipeline(stages=base_stages + [estimator_builder(**best_params)])
     # 训练前记录时间
@@ -103,9 +100,13 @@ def main():
     end_time = time.time()
     print(f"Training time: {end_time - start_time:.2f} seconds")
 
+    start_time = time.time()
     preds = final_model.transform(test_df)
+    end_time = time.time()
+    print(f"Prediction time: {end_time - start_time:.2f} seconds")
 
-    test_rmse = evaluator_rmse.evaluate(preds)
+
+    test_rmse = evaluator.evaluate(preds)
     test_mae  = evaluator_mae.evaluate(preds)
     test_r2   = evaluator_r2.evaluate(preds)
     print(f"Test RMSE: {test_rmse:.4f}, MAE: {test_mae:.4f}, R2: {test_r2:.4f}")

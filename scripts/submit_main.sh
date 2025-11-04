@@ -17,7 +17,6 @@ fi
 
 CLUSTER_NAME="my-cluster"
 REGION="asia-southeast1"
-BUCKET1="weather-2024"
 BUCKET2="spark-result"
 LOG_PATH="gs://$BUCKET2/logs/main_${MODEL}.log"
 
