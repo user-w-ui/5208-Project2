@@ -63,19 +63,19 @@ def main():
 
     # 定义模型和参数网格
     models = {
-        # "gbrt": lambda **p: GBTRegressor(labelCol=LABEL, featuresCol="features", seed=42, **p),
+        "gbrt": lambda **p: GBTRegressor(labelCol=LABEL, featuresCol="features", seed=42, **p),
         # "rf": lambda **p: RandomForestRegressor(labelCol=LABEL, featuresCol="features", seed=42, **p),
         "elasticnet": lambda **p: LinearRegression(labelCol=LABEL, featuresCol="features", **p)
     }
 
     param_grids = {
-        # "gbrt": {
+        "gbrt": {
             # "maxDepth": [2,3,4,5,6,7,8],
             # "maxIter": [20, 50, 80, 100, 150],
-            # "stepSize": [0.01, 0.05, 0.1, 0.15, 0.2],
+            "stepSize": [0.05, 0.1, 0.2, 0.5, 1.0],
             # "maxBins": [16,32,64],
             # "subsamplingRate": [0.5, 0.7, 0.8, 0.9, 1.0]
-#    },
+    },
         # "rf": {
         #     "numTrees": [20, 50, 80, 100, 150],
         #     "maxDepth": [2, 5, 7, 10, 15],

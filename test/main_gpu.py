@@ -26,7 +26,7 @@ TIMESTAMP_COL = "DATE_TS"
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model", choices=["rf", "gbrt", "elastic"], required=True)
+    parser.add_argument("--model", choices=["rf", "gbrt"], required=True)
     parser.add_argument("--train-path", required=True)
     parser.add_argument("--test-path", required=True)
     parser.add_argument("--sample-fraction", type=float, default=0.01)
@@ -66,25 +66,25 @@ def main():
 
     if args.model == "rf":
         param_grid = [
-        {"numTrees": 80,  "maxDepth": 8,  "subsamplingRate": 0.8},
-        # {"numTrees":160,  "maxDepth": 8,  "subsamplingRate": 0.8},
-        # {"numTrees":120,  "maxDepth":10, "subsamplingRate": 0.9},
-        # {"numTrees":240,  "maxDepth":10, "subsamplingRate": 0.9},
-        # {"numTrees":200,  "maxDepth":14, "subsamplingRate": 1.0},
-        # {"numTrees":320,  "maxDepth":14, "subsamplingRate": 1.0},
+        {"numTrees": 80,  "maxDepth": 8,  "subsamplingRate": 0.8, "featureSubsetStrategy": "auto", "minInstancesPerNode":5},
+        {"numTrees":160,  "maxDepth": 8,  "subsamplingRate": 0.8, "featureSubsetStrategy": "auto", "minInstancesPerNode":5},
+        {"numTrees":120,  "maxDepth":10, "subsamplingRate": 0.9, "featureSubsetStrategy": "auto", "minInstancesPerNode":5},
+        {"numTrees":240,  "maxDepth":10, "subsamplingRate": 0.9, "featureSubsetStrategy": "auto", "minInstancesPerNode":5},
+        {"numTrees":200,  "maxDepth":14, "subsamplingRate": 1.0, "featureSubsetStrategy": "auto", "minInstancesPerNode":5},
+        {"numTrees":320,  "maxDepth":14, "subsamplingRate": 1.0, "featureSubsetStrategy": "auto", "minInstancesPerNode":5},
         ]
         estimator_builder = lambda **p: RandomForestRegressor(labelCol=LABEL, featuresCol="features", seed=42, **p)
-    elif args.model == "gbrt":
+    elif args.model == "gbtr":
         param_grid = [
             {"maxDepth":5, "maxIter":80, "stepSize":0.1, "maxBins":32, "subsamplingRate":1.0, "minInstancesPerNode":5},
             {"maxDepth":7, "maxIter":120, "stepSize":0.1, "maxBins":64, "subsamplingRate":0.8, "minInstancesPerNode":5},
         ]
         estimator_builder = lambda **p: GBTRegressor(labelCol=LABEL, featuresCol="features", seed=42, **p)
-    elif args.model == "elastic":
+    elif args.model == "lr":
         param_grid = [
             {"regParam": 0.01, "elasticNetParam": 0.0, "maxIter": 200},
-            #{"regParam": 0.1,  "elasticNetParam": 0.5, "maxIter": 200},
-            #{"regParam": 0.2,  "elasticNetParam": 0.9, "maxIter": 300},
+            {"regParam": 0.1,  "elasticNetParam": 0.5, "maxIter": 200},
+            {"regParam": 0.2,  "elasticNetParam": 0.9, "maxIter": 300},
         ]
         estimator_builder = lambda **p: LinearRegression(
             labelCol=LABEL,
@@ -98,11 +98,6 @@ def main():
 
     best_params, grid_results = grid_search_prefix_cv(folds, base_stages, estimator_builder, param_grid, evaluator)
     print("best params: ", best_params)
-    spark.createDataFrame(
-        [(str(params), score) for params, score in grid_results],
-        ["params", "avg_rmse"],
-        ).show(truncate=False)
-
     final_pipeline = Pipeline(stages=base_stages + [estimator_builder(**best_params)])
     # 训练前记录时间
     start_time = time.time()
@@ -121,25 +116,6 @@ def main():
     test_r2   = evaluator_r2.evaluate(preds)
     print(f"Test RMSE: {test_rmse:.4f}, MAE: {test_mae:.4f}, R2: {test_r2:.4f}")
 
-
-    # 残差图
-    plot.plot_residuals(preds, LABEL, args.model, args.bucket)
-
-    # 散点图
-    plot.plot_pred_vs_actual(preds, LABEL, args.model, args.bucket)
-
-    # 时间序列图
-    plot.plot_time_series(preds, test_df, LABEL, TIMESTAMP_COL, args.model, args.bucket)
-
-    # 特征重要性
-    if args.model in ["rf", "gbtr"]:
-        plot.plot_feature_importances(final_model.stages[-1], numeric_features, args.model, args.bucket)
-
-    # Loss curve
-    if args.model in ["gbtr", "lr"]:
-        plot.plot_loss_curve(final_model.stages[-1], args.model, args.bucket)
-
-
     from google.cloud import storage
     import os
 
@@ -157,7 +133,7 @@ def main():
             blob.upload_from_filename(local_file)
 
     print(f"Model uploaded to gs://{args.bucket}/{gcs_model_path}")
-    print(f"Model !")
+
 
 
 

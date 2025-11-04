@@ -1,8 +1,8 @@
 set -e
 
 
-# CLUSTER_NAME="my-cluster"
-# REGION="asia-southeast1"
+CLUSTER_NAME="my-cluster"
+REGION="asia-southeast1"
 
 
 # NUM_WORKERS=2
@@ -29,11 +29,11 @@ gcloud dataproc jobs submit pyspark test/visualize.py \
     --region=asia-southeast1 \
     --py-files=src.zip \
     -- \
-    --train-path="gs://spark-resultt/train_withds/" \
-    --test-path="gs://spark-resultt/test_withds/" \
+    --train-path="gs://spark-result/train_withds/" \
+    --test-path="gs://spark-result/test_withds/" \
     --sample-fraction=0.001 \
     --num-folds=4 \
-    --bucket="spark-resultt"
+    --bucket="spark-result"
 
 
 gcloud dataproc clusters delete $CLUSTER_NAME --region=asia-southeast1 --quiet

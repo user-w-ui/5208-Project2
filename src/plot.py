@@ -67,7 +67,8 @@ def plot_feature_importances(model_stage, numeric_features, model_name, bucket_n
     """树模型的特征重要性"""
     if not hasattr(model_stage, "featureImportances"):
         return
-    feature_importances = model_stage.featureImportances
+    # 转 numpy
+    feature_importances = np.array(model_stage.featureImportances)
     fig, ax = plt.subplots(figsize=(10,6))
     indices = np.argsort(feature_importances)[::-1]
     ax.bar(range(len(numeric_features)), feature_importances[indices])
