@@ -5,21 +5,21 @@ CLUSTER_NAME="my-cluster"
 REGION="asia-southeast1"
 
 
-NUM_WORKERS=2
-MASTER_DISK=100
-WORKER_DISK=100
+# NUM_WORKERS=2
+# MASTER_DISK=100
+# WORKER_DISK=100
 
 
-gcloud dataproc clusters create $CLUSTER_NAME \
-  --region=$REGION \
-  --num-workers=$NUM_WORKERS \
-  --worker-machine-type=n2-standard-4 \
-  --master-machine-type=n2-standard-4 \
-  --master-boot-disk-size=$MASTER_DISK \
-  --worker-boot-disk-size=$WORKER_DISK \
-  --image-version="2.2-debian12" \
-  --optional-components=JUPYTER \
-  --enable-component-gateway \
+# gcloud dataproc clusters create $CLUSTER_NAME \
+#   --region=$REGION \
+#   --num-workers=$NUM_WORKERS \
+#   --worker-machine-type=n2-standard-4 \
+#   --master-machine-type=n2-standard-4 \
+#   --master-boot-disk-size=$MASTER_DISK \
+#   --worker-boot-disk-size=$WORKER_DISK \
+#   --image-version="2.2-debian12" \
+#   --optional-components=JUPYTER \
+#   --enable-component-gateway \
 
 zip -r src.zip ./src
 
@@ -31,7 +31,7 @@ gcloud dataproc jobs submit pyspark \
     -- \
     --train-path="gs://spark-result/train_withds/" \
     --test-path="gs://spark-result/test_withds/" \
-    --sample-fraction=0.01 \
+    --sample-fraction=0.001 \
     --num-folds=4 \
     --bucket="spark-result"
 

@@ -39,10 +39,20 @@ def main():
     test_df = spark.read.parquet(args.test_path).drop("STATION")
     test_df = test_df.withColumn("ELEVATION", test_df["ELEVATION"].cast(DoubleType()))
 
-    train_sample = train_df.sample(fraction=args.sample_fraction, seed=42)
-    print("Sampled rows:", train_sample.count())
-    train_sample = train_sample.orderBy(TIMESTAMP_COL).cache()
+    train_sorted = train_df.orderBy(TIMESTAMP_COL)
+    total_rows = train_sorted.count()
+    # 按 fraction 等距抽
+    step = int(1 / args.sample_fraction)
+
+    train_sample = train_sorted.rdd.zipWithIndex() \
+        .filter(lambda x: x[1] % step == 0) \
+        .map(lambda x: x[0]) \
+        .toDF(train_df.schema)
+    print(f"Total rows: {total_rows}")
+    print(f"Sampled rows (stride): {train_sample.count()}")
+    train_sample = train_sample.cache()
     folds = prefix_folds(train_sample, TIMESTAMP_COL, num_folds=args.num_folds)
+
     evaluator = RegressionEvaluator(labelCol=LABEL, predictionCol="prediction", metricName="rmse")
 
 
@@ -60,12 +70,11 @@ def main():
 
     param_grids = {
         "gbrt": {
-        "maxDepth": [3,5,7],
-        "maxIter": [50,100,150],
-        "stepSize": [0.05,0.1,0.2],
+        "maxDepth": [2,3,4,5,6,7,8],
+        "maxIter": [20, 50, 100, 200, 400],
+        "stepSize": [0.01, 0.03, 0.05, 0.1, 0.2],
         "maxBins": [16,32,64],
-        "subsamplingRate": [0.7,0.8,1.0],
-        "minInstancesPerNode": [5,10]
+        "subsamplingRate": [0.5, 0.7, 0.8, 0.9, 1.0]
     },
         #"rf": {"numTrees":[50,100,200], "maxDepth":[5,10,15]},
         #"elasticnet": {"regParam":[0.01,0.1,1.0], "elasticNetParam":[0.0,0.5,1.0]}
@@ -75,7 +84,9 @@ def main():
     for model_name, estimator_builder in models.items():
         print(f"=== Processing {model_name} ===")
         for param_name, param_values in param_grids[model_name].items():
+            print("start scanning")
             x, y = single_param_scan(folds, base_stages, estimator_builder, param_name, param_values)
+            print("start plotting")
             plot_and_upload(x, y, param_name, model_name, bucket_name=args.bucket)
             print("Using param:", param_name, "with values:", param_values)
 

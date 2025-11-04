@@ -18,6 +18,7 @@ def single_param_scan(folds, base_stages, estimator_builder, param_name, param_v
             model = pipeline.fit(fold_train)
             preds = model.transform(fold_val)
             fold_scores.append(evaluator.evaluate(preds))
+            print(f"Fold: {len(fold_scores)},{param_name}={val}, RMSE={fold_scores[-1]:.4f}")
         avg_rmse = sum(fold_scores) / len(fold_scores)
         avg_rmses.append(avg_rmse)
         print(f"{param_name}={val}, avg RMSE={avg_rmse:.4f}")
@@ -36,7 +37,7 @@ def plot_and_upload(param_values, avg_rmses, param_name, model_name, bucket_name
     plt.savefig(local_path)
     plt.close()
 
-    # 上传到 GCS
+    # upload to GCS
     client = storage.Client()
     bucket = client.bucket(bucket_name)
     blob = bucket.blob(f"plots/{model_name}_{param_name}.png")
