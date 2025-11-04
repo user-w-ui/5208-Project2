@@ -8,8 +8,8 @@ CLUSTER_NAME="my-cluster"
 REGION="asia-southeast1"
 BUCKET1="weather-2024"
 BUCKET2="spark-result"
-SCRIPT_PATH="gs://$BUCKET1/scripts/data_processing_part1.py"
-LOG_PATH="gs://$BUCKET2/logs/data_processing1.log"
+SCRIPT_PATH="gs://$BUCKET1/scripts/data_split.py"
+LOG_PATH="gs://$BUCKET2/logs/data.log"
 
 NUM_WORKERS=2
 MASTER_DISK=100
@@ -36,5 +36,5 @@ gcloud dataproc jobs submit pyspark $SCRIPT_PATH \
 gsutil cp /tmp/job.log "$LOG_PATH"
 echo "Logs saved to: $LOG_PATH"
 
-gcloud dataproc clusters delete $CLUSTER_NAME --region=$REGION --quiet
-echo "✅ Cluster deleted."
+# gcloud dataproc clusters delete $CLUSTER_NAME --region=$REGION --quiet
+# echo "✅ Cluster deleted."
