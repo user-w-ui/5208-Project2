@@ -18,7 +18,7 @@ fi
 
 CLUSTER_NAME="my-cluster"
 REGION="asia-southeast1"
-BUCKET2="spark-resulttt"
+BUCKET2="weather_2024"
 LOG_PATH="gs://$BUCKET2/logs/main_${MODEL}.log"
 
 TRAINSET_PATH="gs://$BUCKET2/train_withds"
@@ -53,7 +53,7 @@ gcloud dataproc jobs submit pyspark \
   --test-path $TESTSET_PATH \
   --sample-fraction=0.001 \
   --num-folds 4 \
-  --bucket="spark-resulttt" \
+  --bucket="weather_2024" \
   > >(tee /tmp/job_${MODEL}.log) 2>&1
 
 gsutil cp /tmp/job_${MODEL}.log "$LOG_PATH"
@@ -61,7 +61,7 @@ echo "Logs saved to: $LOG_PATH"
 
 MODEL="$1"
 LOCAL_PATH="models/${MODEL}_model"
-BUCKET="your-bucket-name"
+BUCKET="weather_2024"
 
 gsutil -m cp -r $LOCAL_PATH gs://$BUCKET/models/
 
