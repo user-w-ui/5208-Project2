@@ -12,14 +12,13 @@ from src.time_cv import prefix_folds
 from src.model_selection import grid_search_prefix_cv
 from src import plot
 
-# numeric_features = [
-#         "dt_min", "ELEVATION", "DEW", "VIS", "CIG", "SLP", "WND_Speed",
-#         "TMP_lag1", "time_speed", "time_a", "WND_sin", "WND_cos",
-#         "month_sin", "month_cos", "day_sin", "day_cos",
-#         "hour_sin", "hour_cos", "minute_sin", "minute_cos",
-#         "lat_sin", "lat_cos", "lon_sin", "lon_cos"
-#     ]
-numeric_features = ["dt_min"]
+numeric_features = [
+        "dt_min", "ELEVATION", "DEW", "VIS", "CIG", "SLP", "WND_Speed",
+        "TMP_lag1", "time_speed", "time_a", "WND_sin", "WND_cos",
+        "month_sin", "month_cos", "day_sin", "day_cos",
+        "hour_sin", "hour_cos", "minute_sin", "minute_cos",
+        "lat_sin", "lat_cos", "lon_sin", "lon_cos"
+    ]
 LABEL = "TMP"
 TIMESTAMP_COL = "DATE_TS"
 
@@ -36,9 +35,9 @@ def main():
 
     spark = SparkSession.builder.appName("WeatherForecast").getOrCreate()
     train_df = spark.read.parquet(args.train_path).drop("STATION") 
-    train_df = train_df.withColumn("ELEVATION", train_df["ELEVATION"].cast(DoubleType())).limit(1000)
+    train_df = train_df.withColumn("ELEVATION", train_df["ELEVATION"].cast(DoubleType()))
     test_df = spark.read.parquet(args.test_path).drop("STATION") 
-    test_df = test_df.withColumn("ELEVATION", test_df["ELEVATION"].cast(DoubleType())).limit(50)
+    test_df = test_df.withColumn("ELEVATION", test_df["ELEVATION"].cast(DoubleType()))
 
     train_sorted = train_df.orderBy(TIMESTAMP_COL)
     total_rows = train_sorted.count()

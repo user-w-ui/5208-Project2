@@ -51,7 +51,7 @@ gcloud dataproc jobs submit pyspark \
   --model $MODEL \
   --train-path $TRAINSET_PATH \
   --test-path $TESTSET_PATH \
-  --sample-fraction=0.1 \
+  --sample-fraction=0.001 \
   --num-folds 4 \
   --bucket="spark-resulttt" \
   > >(tee /tmp/job_${MODEL}.log) 2>&1
