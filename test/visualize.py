@@ -63,20 +63,25 @@ def main():
 
     # 定义模型和参数网格
     models = {
-        "gbrt": lambda **p: GBTRegressor(labelCol=LABEL, featuresCol="features", seed=42, **p),
-        #"rf": lambda **p: RandomForestRegressor(labelCol=LABEL, featuresCol="features", seed=42, **p),
+        #"gbrt": lambda **p: GBTRegressor(labelCol=LABEL, featuresCol="features", seed=42, **p),
+        "rf": lambda **p: RandomForestRegressor(labelCol=LABEL, featuresCol="features", seed=42, **p),
         #"elasticnet": lambda **p: LinearRegression(labelCol=LABEL, featuresCol="features", **p)
     }
 
     param_grids = {
-        "gbrt": {
-        "maxDepth": [2,3,4,5,6,7,8],
-        "maxIter": [20, 50, 100, 200, 400],
-        "stepSize": [0.01, 0.03, 0.05, 0.1, 0.2],
-        "maxBins": [16,32,64],
-        "subsamplingRate": [0.5, 0.7, 0.8, 0.9, 1.0]
-    },
-        #"rf": {"numTrees":[50,100,200], "maxDepth":[5,10,15]},
+    #     "gbrt": {
+    #         "maxDepth": [2,3,4,5,6,7,8],
+    #         "maxIter": [20, 50, 100, 200, 400],
+    #         "stepSize": [0.01, 0.03, 0.05, 0.1, 0.2],
+    #         "maxBins": [16,32,64],
+    #         "subsamplingRate": [0.5, 0.7, 0.8, 0.9, 1.0]
+    # },
+        "rf": {
+            "numTrees": [20, 50, 80, 100, 150, 200, 300],
+            "maxDepth": [2, 3, 5, 7, 10, 12, 15],
+            "subsamplingRate": [0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
+    }
+
         #"elasticnet": {"regParam":[0.01,0.1,1.0], "elasticNetParam":[0.0,0.5,1.0]}
     }
 

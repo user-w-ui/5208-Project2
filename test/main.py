@@ -27,6 +27,7 @@ def main():
     parser.add_argument("--model", choices=["rf", "gbrt"], required=True)
     parser.add_argument("--train-path", required=True)
     parser.add_argument("--test-path", required=True)
+    parser.add_argument("--sample-fraction", type=float, default=0.01)
     parser.add_argument("--num-folds", type=int, default=4)
     args = parser.parse_args()
 
@@ -36,10 +37,23 @@ def main():
     test_df = spark.read.parquet(args.test_path).drop("STATION") 
     test_df = test_df.withColumn("ELEVATION", test_df["ELEVATION"].cast(DoubleType())) 
 
-    train_sample = train_df.sample(fraction=args.sample_fraction, seed=42)
-    train_sample = train_sample.orderBy(TIMESTAMP_COL).cache()
+    train_sorted = train_df.orderBy(TIMESTAMP_COL)
+    total_rows = train_sorted.count()
+    # 按 fraction 等距抽
+    step = int(1 / args.sample_fraction)
+
+    train_sample = train_sorted.rdd.zipWithIndex() \
+        .filter(lambda x: x[1] % step == 0) \
+        .map(lambda x: x[0]) \
+        .toDF(train_df.schema)
+    print(f"Total rows: {total_rows}")
+    print(f"Sampled rows (stride): {train_sample.count()}")
+    train_sample = train_sample.cache()
     folds = prefix_folds(train_sample, TIMESTAMP_COL, num_folds=args.num_folds)
+
     evaluator = RegressionEvaluator(labelCol=LABEL, predictionCol="prediction", metricName="rmse")
+    evaluator_mae  = RegressionEvaluator(labelCol=LABEL, predictionCol="prediction", metricName="mae")
+    evaluator_r2   = RegressionEvaluator(labelCol=LABEL, predictionCol="prediction", metricName="r2")
 
 
     assembler = VectorAssembler(inputCols=numeric_features, outputCol="features_raw")
@@ -63,9 +77,33 @@ def main():
     best_params, grid_results = grid_search_prefix_cv(folds, base_stages, estimator_builder, param_grid, evaluator)
     final_pipeline = Pipeline(stages=base_stages + [estimator_builder(**best_params)])
     final_model = final_pipeline.fit(train_df)
-    test_rmse = evaluator.evaluate(final_model.transform(test_df))
-    print(f"Test RMSE: {test_rmse:.4f}")
-    final_model.write().overwrite().save(f"models/{args.model}_model")
+    preds = final_model.transform(test_df)
+
+    test_rmse = evaluator_rmse.evaluate(preds)
+    test_mae  = evaluator_mae.evaluate(preds)
+    test_r2   = evaluator_r2.evaluate(preds)
+    print(f"Test RMSE: {test_rmse:.4f}, MAE: {test_mae:.4f}, R2: {test_r2:.4f}")
+
+    from google.cloud import storage
+    import os
+
+    local_model_path = f"models/{args.model}_model"
+    final_model.write().overwrite().save(local_model_path)
+    bucket_name = "spark-result"  
+    gcs_model_path = f"models/{args.model}_model"
+
+    client = storage.Client()
+    bucket = client.bucket(bucket_name)
+    for root, dirs, files in os.walk(local_model_path):
+        for file in files:
+            local_file = os.path.join(root, file)
+            relative_path = os.path.relpath(local_file, local_model_path)
+            blob = bucket.blob(f"{gcs_model_path}/{relative_path}")
+            blob.upload_from_filename(local_file)
+
+    print(f"Model uploaded to gs://{bucket_name}/{gcs_model_path}")
+
+
 
 
 if __name__ == "__main__":
